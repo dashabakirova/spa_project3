@@ -1,0 +1,616 @@
+create or replace package body PKG_SIKN_FAILURES is
+
+  /* возвращает id пользователя */
+  function get_user_id return number as
+    lnUser number := null;
+  
+  begin
+    lnUser := www.GET_G_USERID; -- ID пользователя
+  
+    if (lnUser is null) then
+      www.CHECK_ACCESS;
+      lnUser := www.GET_G_USERID;
+      null;
+    end if;
+  
+    return lnUser;
+  end;
+
+  /* получает список отказов из sikn_otkaz */
+  procedure getSiknFailures is
+    lcJson clob := null;
+    --lnUser number;
+  begin
+    --lnUser := get_user_id();
+    select json_arrayagg(json_object(sf.recid,
+                                     'SPR_RECID' value spr.recid,
+                                     'NU' value spr.nu,
+                                     'NUNAME' value fils.name,
+                                     'PSPNAME' value spr.pspname,
+                                     'NSIKN' value spr.nsikn,
+                                     'PSPOWNER' value spr.pspowner,
+                                     'PRODUCT' value spr.sikntype,
+                                     'DATEOTK' value
+                                     TO_CHAR(sf.dateotk, 'DD.MM.YYYY'),
+                                     'TIMEOTK' value
+                                     TO_CHAR(sf.dateotk, 'HH24:MI'),
+                                     sf.prostanovki,
+                                     sf.prperevodnarezerv,
+                                     sf.prichd,
+                                     'DATEUSTR' value
+                                     TO_CHAR(sf.dateustr, 'DD.MM.YYYY'),
+                                     'TIMEUSTR' value
+                                     TO_CHAR(sf.dateustr, 'HH24:MI'),
+                                     sf.akt,
+                                     sf.pricha,
+                                     sf.fio_det_otk,
+                                     sf.report_otkaz_lnk,
+                                     sf.report_otkaz_nm,
+                                     sf.name_obor,
+                                     sf.monitoring_psp_otkaz,
+                                     sf.monitoring_psp_ustr,
+                                     sf.tip_obor,
+                                     sf.reestrovp,
+                                     sf.year_vip_obor,
+                                     sf.year_vvod_obor,
+                                     sf.zavod_number,
+                                     sf.rezult_otkaz returning clob)
+                         returning clob)
+      into lcJson
+      from sikn_otkaz_test sf
+      join sikn_spr spr
+        on sf.sikn = spr.recid
+      join nsi.filials fils
+        on spr.nu = fils.kod
+     order by sf.recid desc;
+  
+    nsi2.print_json_response(pResult => lcJson);
+  end;
+
+  /* получает фильтрованный список отказов из sikn_otkaz */
+  procedure getSiknFailuresFiltered(pDateotk1  in varchar2 := null,
+                                    pDateotk2  in varchar2 := null,
+                                    pNuname    in varchar2 := null,
+                                    pProduct   in varchar2 := null,
+                                    pFilterNum in number := null) is
+    lcJson clob := null;
+  begin
+    case pFilterNum
+      when '1' then
+        select json_arrayagg(json_object(sf.recid,
+                                         'NU' value spr.nu,
+                                         'NUNAME' value fils.name,
+                                         'PSPNAME' value spr.pspname,
+                                         'NSIKN' value spr.nsikn,
+                                         'PSPOWNER' value spr.pspowner,
+                                         'PRODUCT' value spr.sikntype,
+                                         'DATEOTK' value
+                                         TO_CHAR(sf.dateotk, 'DD.MM.YYYY'),
+                                         'TIMEOTK' value
+                                         TO_CHAR(sf.dateotk, 'HH24:MI'),
+                                         sf.prostanovki,
+                                         sf.prperevodnarezerv,
+                                         sf.prichd,
+                                         'DATEUSTR' value
+                                         TO_CHAR(sf.dateustr, 'DD.MM.YYYY'),
+                                         'TIMEUSTR' value
+                                         TO_CHAR(sf.dateustr, 'HH24:MI'),
+                                         sf.akt,
+                                         sf.pricha,
+                                         sf.fio_det_otk,
+                                         sf.name_obor,
+                                         sf.monitoring_psp_otkaz,
+                                         sf.monitoring_psp_ustr,
+                                         sf.tip_obor,
+                                         sf.year_vip_obor,
+                                         sf.year_vvod_obor,
+                                         sf.zavod_number returning clob)
+                             returning clob)
+          into lcJson
+          from sikn_otkaz_test sf
+          join sikn_spr spr
+            on sf.sikn = spr.recid
+          join nsi.filials fils
+            on spr.nu = fils.kod
+         where (spr.sikntype = pProduct);
+      when '2' then
+        select json_arrayagg(json_object(sf.recid,
+                                         'NU' value spr.nu,
+                                         'NUNAME' value fils.name,
+                                         'PSPNAME' value spr.pspname,
+                                         'NSIKN' value spr.nsikn,
+                                         'PSPOWNER' value spr.pspowner,
+                                         'PRODUCT' value spr.sikntype,
+                                         'DATEOTK' value
+                                         TO_CHAR(sf.dateotk, 'DD.MM.YYYY'),
+                                         'TIMEOTK' value
+                                         TO_CHAR(sf.dateotk, 'HH24:MI'),
+                                         sf.prostanovki,
+                                         sf.prperevodnarezerv,
+                                         sf.prichd,
+                                         'DATEUSTR' value
+                                         TO_CHAR(sf.dateustr, 'DD.MM.YYYY'),
+                                         'TIMEUSTR' value
+                                         TO_CHAR(sf.dateustr, 'HH24:MI'),
+                                         sf.akt,
+                                         sf.pricha,
+                                         sf.fio_det_otk,
+                                         sf.name_obor,
+                                         sf.monitoring_psp_otkaz,
+                                         sf.monitoring_psp_ustr,
+                                         sf.tip_obor,
+                                         sf.year_vip_obor,
+                                         sf.year_vvod_obor,
+                                         sf.zavod_number returning clob)
+                             returning clob)
+          into lcJson
+          from sikn_otkaz_test sf
+          join sikn_spr spr
+            on sf.sikn = spr.recid
+          join nsi.filials fils
+            on spr.nu = fils.kod
+         where (fils.name = pNuname);
+      when '3' then
+        select json_arrayagg(json_object(sf.recid,
+                                         'NU' value spr.nu,
+                                         'NUNAME' value fils.name,
+                                         'PSPNAME' value spr.pspname,
+                                         'NSIKN' value spr.nsikn,
+                                         'PSPOWNER' value spr.pspowner,
+                                         'PRODUCT' value spr.sikntype,
+                                         'DATEOTK' value
+                                         TO_CHAR(sf.dateotk, 'DD.MM.YYYY'),
+                                         'TIMEOTK' value
+                                         TO_CHAR(sf.dateotk, 'HH24:MI'),
+                                         sf.prostanovki,
+                                         sf.prperevodnarezerv,
+                                         sf.prichd,
+                                         'DATEUSTR' value
+                                         TO_CHAR(sf.dateustr, 'DD.MM.YYYY'),
+                                         'TIMEUSTR' value
+                                         TO_CHAR(sf.dateustr, 'HH24:MI'),
+                                         sf.akt,
+                                         sf.pricha,
+                                         sf.fio_det_otk,
+                                         sf.name_obor,
+                                         sf.monitoring_psp_otkaz,
+                                         sf.monitoring_psp_ustr,
+                                         sf.tip_obor,
+                                         sf.year_vip_obor,
+                                         sf.year_vvod_obor,
+                                         sf.zavod_number returning clob)
+                             returning clob)
+          into lcJson
+          from sikn_otkaz_test sf
+          join sikn_spr spr
+            on sf.sikn = spr.recid
+          join nsi.filials fils
+            on spr.nu = fils.kod
+         where ((fils.name = pNuname) and (spr.sikntype = pProduct));
+      when '4' then
+        select json_arrayagg(json_object(sf.recid,
+                                         'NU' value spr.nu,
+                                         'NUNAME' value fils.name,
+                                         'PSPNAME' value spr.pspname,
+                                         'NSIKN' value spr.nsikn,
+                                         'PSPOWNER' value spr.pspowner,
+                                         'PRODUCT' value spr.sikntype,
+                                         'DATEOTK' value
+                                         TO_CHAR(sf.dateotk, 'DD.MM.YYYY'),
+                                         'TIMEOTK' value
+                                         TO_CHAR(sf.dateotk, 'HH24:MI'),
+                                         sf.prostanovki,
+                                         sf.prperevodnarezerv,
+                                         sf.prichd,
+                                         'DATEUSTR' value
+                                         TO_CHAR(sf.dateustr, 'DD.MM.YYYY'),
+                                         'TIMEUSTR' value
+                                         TO_CHAR(sf.dateustr, 'HH24:MI'),
+                                         sf.akt,
+                                         sf.pricha,
+                                         sf.fio_det_otk,
+                                         sf.name_obor,
+                                         sf.monitoring_psp_otkaz,
+                                         sf.monitoring_psp_ustr,
+                                         sf.tip_obor,
+                                         sf.year_vip_obor,
+                                         sf.year_vvod_obor,
+                                         sf.zavod_number returning clob)
+                             returning clob)
+          into lcJson
+          from sikn_otkaz_test sf
+          join sikn_spr spr
+            on sf.sikn = spr.recid
+          join nsi.filials fils
+            on spr.nu = fils.kod
+         where (TO_NUMBER(TO_CHAR(sf.dateotk, 'YYYYMMDD')) between
+               TO_NUMBER(pDateotk1) and TO_NUMBER(pDateotk2));
+      when '5' then
+        select json_arrayagg(json_object(sf.recid,
+                                         'NU' value spr.nu,
+                                         'NUNAME' value fils.name,
+                                         'PSPNAME' value spr.pspname,
+                                         'NSIKN' value spr.nsikn,
+                                         'PSPOWNER' value spr.pspowner,
+                                         'PRODUCT' value spr.sikntype,
+                                         'DATEOTK' value
+                                         TO_CHAR(sf.dateotk, 'DD.MM.YYYY'),
+                                         'TIMEOTK' value
+                                         TO_CHAR(sf.dateotk, 'HH24:MI'),
+                                         sf.prostanovki,
+                                         sf.prperevodnarezerv,
+                                         sf.prichd,
+                                         'DATEUSTR' value
+                                         TO_CHAR(sf.dateustr, 'DD.MM.YYYY'),
+                                         'TIMEUSTR' value
+                                         TO_CHAR(sf.dateustr, 'HH24:MI'),
+                                         sf.akt,
+                                         sf.pricha,
+                                         sf.fio_det_otk,
+                                         sf.name_obor,
+                                         sf.monitoring_psp_otkaz,
+                                         sf.monitoring_psp_ustr,
+                                         sf.tip_obor,
+                                         sf.year_vip_obor,
+                                         sf.year_vvod_obor,
+                                         sf.zavod_number returning clob)
+                             returning clob)
+          into lcJson
+          from sikn_otkaz_test sf
+          join sikn_spr spr
+            on sf.sikn = spr.recid
+          join nsi.filials fils
+            on spr.nu = fils.kod
+         where ((TO_NUMBER(TO_CHAR(sf.dateotk, 'YYYYMMDD')) between
+               TO_NUMBER(pDateotk1) AND TO_NUMBER(pDateotk2)) and
+               (spr.sikntype = pProduct));
+      when '6' then
+        select json_arrayagg(json_object(sf.recid,
+                                         'NU' value spr.nu,
+                                         'NUNAME' value fils.name,
+                                         'PSPNAME' value spr.pspname,
+                                         'NSIKN' value spr.nsikn,
+                                         'PSPOWNER' value spr.pspowner,
+                                         'PRODUCT' value spr.sikntype,
+                                         'DATEOTK' value
+                                         TO_CHAR(sf.dateotk, 'DD.MM.YYYY'),
+                                         'TIMEOTK' value
+                                         TO_CHAR(sf.dateotk, 'HH24:MI'),
+                                         sf.prostanovki,
+                                         sf.prperevodnarezerv,
+                                         sf.prichd,
+                                         'DATEUSTR' value
+                                         TO_CHAR(sf.dateustr, 'DD.MM.YYYY'),
+                                         'TIMEUSTR' value
+                                         TO_CHAR(sf.dateustr, 'HH24:MI'),
+                                         sf.akt,
+                                         sf.pricha,
+                                         sf.fio_det_otk,
+                                         sf.name_obor,
+                                         sf.monitoring_psp_otkaz,
+                                         sf.monitoring_psp_ustr,
+                                         sf.tip_obor,
+                                         sf.year_vip_obor,
+                                         sf.year_vvod_obor,
+                                         sf.zavod_number returning clob)
+                             returning clob)
+          into lcJson
+          from sikn_otkaz_test sf
+          join sikn_spr spr
+            on sf.sikn = spr.recid
+          join nsi.filials fils
+            on spr.nu = fils.kod
+         where ((TO_NUMBER(TO_CHAR(sf.dateotk, 'YYYYMMDD')) between
+               TO_NUMBER(pDateotk1) and TO_NUMBER(pDateotk2)) and
+               (fils.name = pNuname));
+      else
+        select json_arrayagg(json_object(sf.recid,
+                                         'NU' value spr.nu,
+                                         'NUNAME' value fils.name,
+                                         'PSPNAME' value spr.pspname,
+                                         'NSIKN' value spr.nsikn,
+                                         'PSPOWNER' value spr.pspowner,
+                                         'PRODUCT' value spr.sikntype,
+                                         'DATEOTK' value
+                                         TO_CHAR(sf.dateotk, 'DD.MM.YYYY'),
+                                         'TIMEOTK' value
+                                         TO_CHAR(sf.dateotk, 'HH24:MI'),
+                                         sf.prostanovki,
+                                         sf.prperevodnarezerv,
+                                         sf.prichd,
+                                         'DATEUSTR' value
+                                         TO_CHAR(sf.dateustr, 'DD.MM.YYYY'),
+                                         'TIMEUSTR' value
+                                         TO_CHAR(sf.dateustr, 'HH24:MI'),
+                                         sf.akt,
+                                         sf.pricha,
+                                         sf.fio_det_otk,
+                                         sf.name_obor,
+                                         sf.monitoring_psp_otkaz,
+                                         sf.monitoring_psp_ustr,
+                                         sf.tip_obor,
+                                         sf.year_vip_obor,
+                                         sf.year_vvod_obor,
+                                         sf.zavod_number returning clob)
+                             returning clob)
+          into lcJson
+          from sikn_otkaz_test sf
+          join sikn_spr spr
+            on sf.sikn = spr.recid
+          join nsi.filials fils
+            on spr.nu = fils.kod
+         where ((TO_NUMBER(TO_CHAR(sf.dateotk, 'YYYYMMDD')) between
+               TO_NUMBER(pDateotk1) and TO_NUMBER(pDateotk2)) and
+               (fils.name = pNuname) and (spr.sikntype = pProduct));
+    end case;
+    nsi2.print_json_response(pResult => lcJson);
+  end;
+
+  /* получает один отказ по id */
+  procedure getJsonFailure(pRECID in varchar2) is
+    lcRes clob;
+  begin
+    if pRECID is not null then
+      select JSON_OBJECT(KEY 'spr_recid' value spr.recid,
+                         KEY 'recid' value so.recid,
+                         KEY 'nuname' value fils.name,
+                         KEY 'pspname' value spr.pspname,
+                         KEY 'dateotk' value
+                         TO_CHAR(so.dateotk, 'DD.MM.YYYY'),
+                         KEY 'timeotk' value TO_CHAR(so.dateotk, 'HH24:MI'),
+                         KEY 'prostanovki' value so.prostanovki,
+                         KEY 'prperevodnarezerv' value so.prperevodnarezerv,
+                         KEY 'prichd' value so.prichd,
+                         KEY 'dateustr' value
+                         TO_CHAR(so.dateustr, 'DD.MM.YYYY'),
+                         KEY 'timeustr' value
+                         TO_CHAR(so.dateustr, 'HH24:MI'),
+                         KEY 'akt' value so.akt,
+                         KEY 'pricha' value so.pricha,
+                         KEY 'fio_det_otk' value so.fio_det_otk,
+                         KEY 'report_otkaz_lnk' value so.report_otkaz_lnk,
+                         KEY 'report_otkaz_nm' value so.report_otkaz_nm,
+                         KEY 'report_ustr_lnk' value so.report_ustr_lnk,
+                         KEY 'report_ustr_nm' value so.report_ustr_nm,
+                         KEY 'akt_lnk' value so.akt_lnk,
+                         KEY 'akt_nm' value so.akt_nm,
+                         KEY 'name_obor' value so.name_obor,
+                         KEY 'monitoring_psp_otkaz' value
+                         so.monitoring_psp_otkaz,
+                         KEY 'monitoring_psp_ustr' value
+                         so.monitoring_psp_ustr,
+                         KEY 'tip_obor' value so.tip_obor,
+                         KEY 'reestrovp' value so.reestrovp,
+                         KEY 'vidrab' value so.vidrab,
+                         KEY 'year_vip_obor' value so.year_vip_obor,
+                         KEY 'year_vvod_obor' value so.year_vvod_obor,
+                         KEY 'zavod_number' value so.zavod_number,
+                         KEY 'rezult_otkaz' value so.rezult_otkaz returning clob)
+      
+        into lcRes
+        from sikn_otkaz_test so
+        join sikn_spr spr
+          on so.sikn = spr.recid
+        join nsi.filials fils
+          on spr.nu = fils.kod
+       where (so.recid = to_number(pRECID));
+      nsi2.print_json_response(pResult => lcRes);
+    end if;
+  end;
+
+  /* процедура сохранения отказа */
+  procedure saveFail(pRecid                in varchar2,
+                     pSpr_recid            in varchar2,
+                     pDateotk              in varchar2,
+                     pProstanovki          in varchar2,
+                     pPrperevodnarezerv    in varchar2,
+                     pPrichd               in varchar2 := null,
+                     pDateustr             in varchar2 := null,
+                     pAkt                  in varchar2 := null,
+                     pPricha               in varchar2 := null,
+                     pFio_det_otk          in varchar2 := null,
+                     pName_obor            in varchar2 := null,
+                     pMonitoring_psp_otkaz in varchar2 := null,
+                     pMonitoring_psp_ustr  in varchar2 := null,
+                     pTip_obor             in varchar2 := null,
+                     pReestrovp            in varchar2 := null,
+                     pVidrab               in varchar2 := null,
+                     pYear_vip_obor        in varchar2 := null,
+                     pYear_vvod_obor       in varchar2 := null,
+                     pZavod_number         in varchar2 := null,
+                     pRezult_otkaz         in varchar2 := null) is
+  begin
+    if pRecid is null or pRecid = '-1' then
+      insert into sikn_otkaz_test
+        (recid,
+         sikn,
+         dateotk,
+         prostanovki,
+         prperevodnarezerv,
+         prichd,
+         dateustr,
+         akt,
+         pricha,
+         fio_det_otk,
+         name_obor,
+         monitoring_psp_otkaz,
+         monitoring_psp_ustr,
+         tip_obor,
+         reestrovp,
+         vidrab,
+         year_vip_obor,
+         year_vvod_obor,
+         zavod_number,
+         rezult_otkaz)
+      values
+        ((select max(recid) + 20 from sikn_otkaz_test),
+         to_number(pSpr_recid),
+         to_date(pDateotk, 'YYYY-MM-DD HH24:MI:SS'),
+         to_number(pProstanovki),
+         to_number(pPrperevodnarezerv),
+         pPrichd,
+         to_date(pDateustr, 'YYYY-MM-DD HH24:MI:SS'),
+         pAkt,
+         pPricha,
+         pFio_det_otk,
+         pName_obor,
+         pMonitoring_psp_otkaz,
+         pMonitoring_psp_ustr,
+         pTip_obor,
+         pReestrovp,
+         pVidrab,
+         to_number(pYear_vip_obor),
+         to_number(pYear_vvod_obor),
+         pZavod_number,
+         pRezult_otkaz);
+    else
+      update sikn_otkaz_test
+         set sikn                 = to_number(pSpr_recid),
+             dateotk              = to_date(pDateotk,
+                                            'YYYY-MM-DD HH24:MI:SS'),
+             prostanovki          = to_number(pProstanovki),
+             prperevodnarezerv    = to_number(pPrperevodnarezerv),
+             prichd               = pPrichd,
+             dateustr             = to_date(pDateustr,
+                                            'YYYY-MM-DD HH24:MI:SS'),
+             akt                  = pAkt,
+             pricha               = pPricha,
+             fio_det_otk          = pFio_det_otk,
+             name_obor            = pName_obor,
+             monitoring_psp_otkaz = pMonitoring_psp_otkaz,
+             monitoring_psp_ustr  = pMonitoring_psp_ustr,
+             tip_obor             = pTip_obor,
+             reestrovp            = pReestrovp,
+             vidrab               = pVidrab,
+             year_vip_obor        = to_number(pYear_vip_obor),
+             year_vvod_obor       = to_number(pYear_vvod_obor),
+             zavod_number         = pZavod_number,
+             rezult_otkaz         = pRezult_otkaz
+       where recid = to_number(pRecid);
+    end if;
+    htp.p('ok');
+  end;
+
+  /* процедура удаления отказа */
+  procedure deleteFail(pRECID in varchar2) is
+  begin
+    if pRECID is not null and pRECID != '-1' then
+      delete from sikn_otkaz_test where recid = to_number(pRECID);
+    end if;
+    htp.p('ok');
+  end;
+
+  /* процедура получения наименований филиалов по коду sikn */
+  PROCEDURE getPspname(pNuname in varchar2) is
+    lcJson clob := null;
+  begin
+  
+    select json_arrayagg(json_object('NU' value spr.nu,
+                                     'NUNAME' value fils.name,
+                                     'PSPNAME' value spr.pspname,
+                                     'NSIKN' value spr.nsikn,
+                                     'PSPOWNER' value spr.pspowner,
+                                     'PRODUCT' value spr.sikntype returning clob)
+                         returning clob)
+      into lcJson
+      from sikn_otkaz_test sf
+      join sikn_spr spr
+        on sf.sikn = spr.recid
+      join nsi.filials fils
+        on spr.nu = fils.kod
+     where (fils.name = pNuname);
+  
+    nsi2.print_json_response(pResult => lcJson);
+  end;
+
+  /* загрузка файла донесения об отказе */
+  procedure uploadFileOtkaz(pFile  varchar2 := null,
+                            pRecid varchar2 := null) as
+    lsFileLink varchar2(1000) := '';
+    lsFileName varchar2(1000) := '';
+  begin
+  
+    if (pFile is null) then
+      raise_application_error(-20000,
+                              'Ошибка! Не выбран файл');
+    end if;
+  
+    if (pRecid is null) then
+      raise_application_error(-20000,
+                              'Ошибка привязки к таблице sikn_otkaz_test');
+    end if;
+  
+    nsi.PKG_FILES.UPLOAD_FILE(pFILE          => pFile,
+                              pFILE_PREFIX   => 'SIKN_OTKAZ_TEST',
+                              ID             => pRecid,
+                              pDIRNAME       => 'SIKN',
+                              pMAX_FILE_SIZE => 3000000,
+                              pFILE_LINK     => lsFileLink,
+                              pFILE_NAME     => lsFileName);
+  
+    update sikn_otkaz_test so
+       set so.report_otkaz_lnk = lsFileLink,
+           so.report_otkaz_nm  = lsFileName
+     where so.recid = pRecid;
+  
+  end;
+
+  /* загрузка файла донесения об устранении */
+  procedure uploadFileUstr(pFile varchar2 := null, pRecid varchar2 := null) as
+    lsFileLink varchar2(1000) := '';
+    lsFileName varchar2(1000) := '';
+  begin
+  
+    if (pFile IS NULL) then
+      raise_application_error(-20000,
+                              'Ошибка! Не выбран файл');
+    end if;
+  
+    if (pRecid is null) then
+      raise_application_error(-20000,
+                              'Ошибка привязки к таблице sikn_otkaz_test');
+    end if;
+  
+    nsi.PKG_FILES.UPLOAD_FILE(pFILE          => pFile,
+                              pFILE_PREFIX   => 'SIKN_USTR_TEST',
+                              ID             => pRecid,
+                              pDIRNAME       => 'SIKN',
+                              pMAX_FILE_SIZE => 3000000,
+                              pFILE_LINK     => lsFileLink,
+                              pFILE_NAME     => lsFileName);
+  
+    update sikn_otkaz_test so
+       set so.report_ustr_lnk = lsFileLink, so.report_ustr_nm = lsFileName
+     where so.recid = pRecid;
+  end;
+
+  /* загрузка файла акта*/
+  procedure uploadFileAkt(pFile varchar2 := null, pRecid varchar2 := null) as
+    lsFileLink varchar2(1000) := '';
+    lsFileName varchar2(1000) := '';
+  begin
+  
+    if (pFile is null) then
+      raise_application_error(-20000,
+                              'Ошибка! Не выбран файл');
+    end if;
+  
+    if (pRecid is null) then
+      raise_application_error(-20000,
+                              'Ошибка привязки к таблице sikn_otkaz_test');
+    end if;
+  
+    nsi.PKG_FILES.UPLOAD_FILE(pFILE          => pFile,
+                              pFILE_PREFIX   => 'SIKN_AKT_TEST',
+                              ID             => pRecid,
+                              pDIRNAME       => 'SIKN',
+                              pMAX_FILE_SIZE => 3000000,
+                              pFILE_LINK     => lsFileLink,
+                              pFILE_NAME     => lsFileName);
+  
+    update sikn_otkaz_test so
+       set so.akt_lnk = lsFileLink, so.akt_nm = lsFileName
+     where so.recid = pRecid;     
+  end;
+
+end PKG_SIKN_FAILURES;

@@ -1,0 +1,37 @@
+create or replace trigger sikn_otkaz_mod
+before insert or update or delete on sikn_otkaz
+referencing old as old new as new
+for each row
+declare
+v_user varchar2(255);
+v_modtype varchar2(1);
+begin
+  v_user:=dmnd.GET_CLIENT_INFO(www.GET_G_USERID);
+  if trim(v_user) is not null then
+    if Inserting then
+      select sikn_otkaz_seq.nextval into :new.recid from dual;
+      v_modtype:='i';
+    elsif Deleting then 
+        v_modtype:='d';
+    else
+        v_modtype:='u';
+        :new.ldate:=sysdate;
+        :new.luser:=v_user;
+    end if;
+    if Deleting then
+      insert into sikn_otkaz_log
+        (recid, sikn, dateotk, prostanovki, prperevodnarezerv, prichd, dateustr, akt, pricha, ldate, luser, modtype)
+      values
+        (:old.recid, :old.sikn, :old.dateotk, :old.prostanovki, :old.prperevodnarezerv, :old.prichd, :old.dateustr, :old.akt, :old.pricha, sysdate, v_user, v_modtype);
+    else
+      insert into sikn_otkaz_log
+        (recid, sikn, dateotk, prostanovki, prperevodnarezerv, prichd, dateustr, akt, pricha, ldate, luser, modtype)
+      values
+        (:new.recid, :new.sikn, :new.dateotk, :new.prostanovki, :new.prperevodnarezerv, :new.prichd, :new.dateustr, :new.akt, :new.pricha, sysdate, v_user, v_modtype);
+    end if;
+
+    --v_user:=SYS_CONTEXT('USERENV', 'CLIENT_IDENTIFIER');
+  else
+    raise_application_error(-20100, 'Операция отменена. Не определен пользователь. Необходимо перезапустить задачу.');
+  end if;
+end;
